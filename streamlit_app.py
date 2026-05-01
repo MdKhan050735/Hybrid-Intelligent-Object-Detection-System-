@@ -30,17 +30,55 @@ conf_threshold = st.sidebar.slider("YOLO Confidence", 0.0, 1.0, 0.25)
 padding = st.sidebar.slider("Crop Padding", 0, 100, 40)
 
 # Input choice
-input_mode = st.radio("Choose Input:", ["Upload Image", "Camera Input"])
+input_mode = st.radio("Choose Input:", ["Upload Image", "Camera Input", "Live Webcam"])
 
 input_image = None
 if input_mode == "Upload Image":
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
     if uploaded_file:
         input_image = Image.open(uploaded_file)
-else:
+elif input_mode == "Camera Input":
     cam_image = st.camera_input("Take a photo")
     if cam_image:
         input_image = Image.open(cam_image)
+else:
+    st.info("Live Video Mode: YOLO is running in real-time. Gemini analysis is disabled in Live Video for performance.")
+    
+    # We use st.camera_input or a custom component for REAL real-time, 
+    # but Streamlit's native live webcam is usually best handled via camera_input 
+    # for simplicity, or a loop with cv2 for local use.
+    # Since the user asked for "Real time detection", let's use a CV2 loop if it's local.
+    
+    run_live = st.button("Start Live Feed")
+    if run_live:
+        stop_live = st.button("Stop Feed")
+        FRAME_WINDOW = st.image([])
+        cap = cv2.VideoCapture(0)
+        
+        while not stop_live:
+            ret, frame = cap.read()
+            if not ret:
+                st.error("Cannot access webcam.")
+                break
+            
+            # Resize for speed
+            display_frame = cv2.resize(frame, (640, 480))
+            
+            # Run YOLO
+            results = model(display_frame, conf=conf_threshold, verbose=False)
+            
+            # Draw results
+            res_plotted = results[0].plot()
+            res_rgb = cv2.cvtColor(res_plotted, cv2.COLOR_BGR2RGB)
+            
+            # Display
+            FRAME_WINDOW.image(res_rgb)
+            
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        
+        cap.release()
+        st.write("Live Feed Stopped.")
 
 if input_image:
     # Convert to OpenCV format
