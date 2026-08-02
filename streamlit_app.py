@@ -4,7 +4,6 @@ import numpy as np
 from ultralytics import YOLOWorld
 import gemini_engine
 from PIL import Image
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
